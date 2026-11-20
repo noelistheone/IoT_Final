@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f4f5ef">
+  <meta name="description" content="Indoor air quality readings and device settings.">
+  <title>AirCue | Air Quality Monitor</title>
+  <link rel="stylesheet" href="/style.css?v=english2">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script src="/ble.js?v=english2" defer></script>
+  <script src="/app.js?v=english2" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="AirCue home"><span class="brand-mark" aria-hidden="true">◌</span> AirCue</a>
+    <span id="source"></span>
+    <button id="logout" class="secondary compact" hidden>Sign out</button>
+  </header>
+  <main>
+    <section id="login-panel" class="card login">
+      <h1>Air Quality Monitor</h1>
+      <div class="connection-options">
+        <div class="cloud-connection">
+          <h2>Sign in</h2>
+          <form id="login">
+            <label>Username<input name="username" value="admin" autocomplete="username" required></label>
+            <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+            <button type="submit" class="full-width">Sign in</button>
+          </form>
+          <p class="hint" id="login-hint" role="status" hidden></p>
+        </div>
+        <div class="transport-choice">
+          <h2>Bluetooth</h2>
+          <button id="connect-ble" class="secondary full-width" type="button">Connect via Bluetooth</button>
+          <p id="ble-progress" class="hint" role="status" aria-live="polite" hidden></p>
+          <details class="inline-disclosure">
+            <summary>Pairing help</summary>
+            <p class="hint">Use Chrome on Mac or Bluefy on iPhone. To pair, hold button 1 for two seconds, then enter the code on the device display.</p>
+          </details>
+          <p class="hint" id="offline-ready" hidden></p>
+        </div>
+      </div>
+    </section>
+    <div id="dashboard" hidden>
+      <div class="toolbar">
+        <h1 id="view-title">Overview</h1>
+        <label id="device-picker" hidden>Device<select id="devices"></select></label>
+        <span id="freshness" class="badge">Waiting for data</span><button id="switch-transport" class="secondary compact" type="button">Use Bluetooth</button>
+      </div>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <nav id="page-tabs" class="page-tabs" role="tablist" aria-label="Dashboard">
+        <button id="tab-overview" type="button" role="tab" data-view="overview" aria-controls="panel-overview" aria-selected="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Overview</span>
+        </button>
+        <button id="tab-history" type="button" role="tab" data-view="history" aria-controls="panel-history" aria-selected="false" tabindex="-1">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3v17h17M7 14l4-5 4 3 5-7"/></svg><span>History</span>
+        </button>
+        <button id="tab-settings" type="button" role="tab" data-view="settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h4m4 0h8M4 17h8m4 0h4"/><circle cx="10" cy="7" r="2"/><circle cx="14" cy="17" r="2"/></svg><span>Settings</span>
+        </button>
+      </nav>
+
+      <section id="panel-overview" class="view-panel" data-panel="overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+        <div class="overview-grid">
+          <section class="card reading" aria-labelledby="co2-title">
+            <div class="section-heading"><h2 id="co2-title">CO₂</h2><span class="badge" id="level">Pending</span></div>
+            <div class="reading-value"><strong id="ppm">—</strong><span class="unit">ppm</span></div>
+            <div class="reading-meta"><p id="quality">Waiting for a reading</p><span id="data-age" class="data-age">Waiting for data</span></div>
+            <p id="raw-preview" class="raw-preview" hidden></p>
+            <div class="climate-readings" aria-label="Current readings"><button class="climate-reading" type="button" data-metric="temperature_c"><span>Temperature</span><strong id="climate-temperature">—</strong></button><button class="climate-reading" type="button" data-metric="humidity_rh"><span>Humidity</span><strong id="climate-humidity">—</strong></button><button class="climate-reading" type="button" data-metric="pressure_hpa"><span>Pressure</span><strong id="climate-pressure">—</strong></button></div>
+            <p id="range-warning" class="hint warning-text" hidden>Outside sensor accuracy range</p>
+            <div class="reading-footer"><span class="badge" id="trend">Trend pending</span><button type="button" class="text-button" data-view="history">View history</button></div>
+          </section>
+          <div class="overview-side">
+            <section class="card episode-card">
+              <div class="section-heading"><h2>Ventilation</h2><button id="mute" class="secondary compact" disabled>Mute for 5 min</button></div>
+              <p id="ventilation-advice">Waiting for a valid reading.</p>
+              <details id="episode-details" class="inline-disclosure" hidden><summary>Event details</summary><p id="episode">Waiting for device status.</p><p id="episode-meta" class="hint"></p></details>
+            </section>
+            <details class="card disclosure" id="status-details">
+              <summary><span class="summary-copy"><strong>Connection details</strong><span id="connection-summary">Checking connection</span></span></summary>
+              <div class="disclosure-body">
+                <dl><dt>Network name</dt><dd id="wifi-name">—</dd><dt>Network / sync</dt><dd id="connection">—</dd><dt>Measured</dt><dd id="measured">—</dd><dt>Received</dt><dd id="received">—</dd><dt>Reading age</dt><dd id="age">—</dd><dt>Uptime</dt><dd id="uptime">—</dd><dt>Pending records (max)</dt><dd id="backlog">—</dd></dl>
+                <button type="button" class="secondary full-width" data-view="settings" data-expand="network-settings">Manage Wi-Fi</button>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section id="panel-history" class="view-panel" data-panel="history" role="tabpanel" aria-labelledby="tab-history" tabindex="0" hidden>
+        <section class="card history-card">
+          <div class="section-heading"><h2>Trends</h2><div class="actions"><button id="cancel-history" class="secondary compact" hidden>Cancel</button><button id="sync-history" class="secondary compact">Sync history</button></div></div>
+          <label class="metric-picker">Metric<select id="chart-metric"><option value="co2_raw_ppm">CO₂ (raw)</option><option value="temperature_c">Temperature</option><option value="humidity_rh">Relative humidity</option><option value="pressure_hpa">Pressure</option><option value="barometer_temperature_c">Pressure sensor temperature</option><option value="mean">CO₂ (validated)</option></select></label>
+          <p id="metric-note" class="hint">One-minute averages.</p>
+          <p class="hint" id="history-info"></p>
+          <p id="chart-empty" class="empty-state">No minute records yet.</p>
+          <canvas id="chart" height="230" aria-label="Climate readings by minute" role="img"></canvas>
+          <div class="legend" id="chart-legend"><span>● Average</span><span>— Min / max</span><span>Gaps show missing readings</span></div>
+          <div class="export-row"><a id="export" class="button secondary" href="#">Export CSV</a></div>
+          <details id="export-options" class="inline-disclosure">
+            <summary>Export range</summary>
+            <form id="export-filter"><div class="form-grid"><label>Start (local time)<input name="from" type="datetime-local"></label><label>End (exclusive, local time)<input name="to" type="datetime-local"></label><label>Run ID (optional)<input name="run_id" maxlength="40" pattern="[a-zA-Z0-9_-]*" autocomplete="off"></label></div></form>
+            <p class="hint" id="export-range-note">Leave both dates blank to include records without timestamps.</p>
+          </details>
+        </section>
+        <details id="minute-details" class="card disclosure">
+          <summary><span class="summary-copy"><strong>Minute records</strong><span id="history-count">No records yet</span></span></summary>
+          <div class="disclosure-body"><div class="table-wrap" tabindex="0" role="region" aria-label="Minute records"><table><thead><tr id="history-columns"></tr></thead><tbody id="history-rows"></tbody></table></div></div>
+        </details>
+        <details id="event-history" class="card disclosure">
+          <summary><span class="summary-copy"><strong>Alerts and recovery</strong><span id="event-count">No events</span></span></summary>
+          <div class="disclosure-body"><p id="events-empty" class="hint">No events in the synced history.</p><ul id="events" class="events"></ul></div>
+        </details>
+      </section>
+
+      <section id="panel-settings" class="view-panel" data-panel="settings" role="tabpanel" aria-labelledby="tab-settings" tabindex="0" hidden>
+        <details id="network-settings" class="card disclosure" data-settings>
+          <summary><span class="setting-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 8a15 15 0 0 1 18 0M6 12a10 10 0 0 1 12 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="20" r=".7"/></svg></span><span class="summary-copy"><strong>Wi-Fi</strong><span id="network-summary">Saved networks</span></span></summary>
+          <div class="disclosure-body">
+            <p class="hint" id="saved-wifi">Networks are tried in order.</p>
+            <ul id="wifi-list" class="wifi-list"></ul>
+            <button id="uplink" class="full-width">Enable Wi-Fi</button>
+            <details id="wifi-editor" class="inline-disclosure">
+              <summary>Add or edit a network</summary>
+              <form id="wifi"><label>Network name<input name="ssid" maxlength="32" autocomplete="off" required></label><label>Wi-Fi password<input name="wifi_password" type="password" minlength="8" maxlength="63" autocomplete="new-password" placeholder="Leave blank to keep your saved password"></label><button type="submit" class="secondary full-width">Save network</button></form>
+              <p class="hint">Up to 8 networks. Leave the password blank for an open network.</p>
+            </details>
+          </div>
+        </details>
+        <details id="alarm-settings" class="card disclosure" data-settings>
+          <summary><span class="setting-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 8-3 8-3 10h18c0-2-3-2-3-10M10 21h4"/></svg></span><span class="summary-copy"><strong>Alerts <small id="revision"></small></strong><span id="rules-summary">Thresholds and timing</span></span></summary>
+          <div class="disclosure-body">
+            <button id="sound-toggle" type="button" class="secondary full-width">Alert sound</button>
+            <form id="rules">
+              <div class="form-grid"><label>Watch threshold (ppm)<input name="watch_on" type="number" inputmode="numeric" min="380" max="5000" required></label><label>Watch clear (ppm)<input name="watch_off" type="number" inputmode="numeric" min="380" max="5000" required></label><label>High threshold (ppm)<input name="high_on" type="number" inputmode="numeric" min="380" max="5000" required></label><label>High clear (ppm)<input name="high_off" type="number" inputmode="numeric" min="380" max="5000" required></label></div>
+              <details id="rule-timing" class="inline-disclosure"><summary>Timing and trend</summary><div class="form-grid"><label>Watch delay (s)<input name="watch_s" type="number" inputmode="numeric" min="1" max="3600" required></label><label>High delay (s)<input name="high_s" type="number" inputmode="numeric" min="1" max="3600" required></label><label>High clear delay (s)<input name="high_clear_s" type="number" inputmode="numeric" min="1" max="3600" required></label><label>Recovery delay (s)<input name="clear_s" type="number" inputmode="numeric" min="1" max="3600" required></label><label>Trend change (ppm)<input name="trend_ppm" type="number" inputmode="numeric" min="50" max="1000" required></label></div></details>
+              <button type="submit" class="full-width">Save alert settings</button>
+            </form>
+            <p class="hint" id="command-status"></p><ul id="commands" class="events"></ul>
+          </div>
+        </details>
+        <details id="run-settings" class="card disclosure" data-settings>
+          <summary><span class="setting-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v5l3 2M9 2h6M12 2v3"/></svg></span><span class="summary-copy"><strong>Sensor and recording</strong><span id="run-summary">Setup, 72-hour recording, and updates</span></span></summary>
+          <div class="disclosure-body">
+            <h3>Sensor setup</h3><p id="commission-progress">Checking sensor setup.</p>
+            <progress id="preparation-progress" max="43200000" value="0" aria-label="Sensor setup progress"></progress>
+            <label class="check"><input id="fresh-air" type="checkbox">The sensor has completed setup and been exposed to fresh air.</label>
+            <button id="commission" class="secondary full-width">Confirm setup</button>
+            <div class="setting-section"><h3>72-hour recording</h3><p id="run-info" class="hint"></p><div class="actions"><button id="run-start" class="secondary">Start recording</button><button id="run-stop" class="secondary">Stop recording</button></div></div>
+            <details id="maintenance" class="inline-disclosure"><summary>Maintenance</summary><div class="actions"><button id="demo" class="secondary">Enable demo mode</button><button id="ota" class="secondary">Check for updates</button></div></details>
+          </div>
+        </details>
+        <details id="device-details" class="card disclosure" data-settings>
+          <summary><span class="setting-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 7h6M9 11h6M11 17h2"/></svg></span><span class="summary-copy"><strong>Device diagnostics</strong><span id="firmware-summary">Firmware and missing data</span></span></summary>
+          <div class="disclosure-body"><h3>Device status</h3><pre id="diagnostics"></pre><h3>Missing data</h3><pre id="gaps"></pre></div>
+        </details>
+      </section>
+    </div>
+  </main>
+  <div id="feedback" class="feedback" hidden><p id="message" role="status" aria-live="polite" aria-atomic="true"></p><button id="dismiss-message" type="button" aria-label="Dismiss message">×</button></div>
+</body>
+</html>

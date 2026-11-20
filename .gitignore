@@ -1,0 +1,37 @@
+# Device credentials, desktop state and signed images
+/private/
+.env
+.env.*
+*.pem
+*.key
+*.db
+*.db-shm
+*.db-wal
+*.sqlite*
+*.bin
+*.elf
+*.map
+
+# Build and development tools
+/.pio/
+/build/
+/.venv/
+/.build-venv/
+/.pytest_cache/
+__pycache__/
+*.pyc
+/sdkconfig.esp32dev*
+/include/aircue_sdk_patch/
+/include/generated_assets.hpp
+/.vscode/
+.DS_Store
+
+# Local course materials, experiments and recorded data
+/docs/
+/diagnostics/
+/sites/
+*.docx
+*.pdf
+*.csv
+!/partitions.csv
+*.log
